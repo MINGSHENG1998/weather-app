@@ -7,17 +7,21 @@ const api = {
   get: {
     weather: {
       autoComplete: (params) =>
-        services.get(
+        services.weather.get(
           `/geo/1.0/direct${encodeQueryParams(
             params
           )}&callback=test&appid=${apiKey}`
         ),
       current: (params) =>
-        services.get(
+        services.weather.get(
           `/data/2.5/weather${encodeQueryParams(
             params
           )}&callback=test&appid=${apiKey}`
         ),
+    },
+    country: {
+      search: (params) => services.country.get(`name/${params.name}`),
+      all: () => services.country.get("all"),
     },
   },
 };

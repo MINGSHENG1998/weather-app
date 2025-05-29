@@ -1,4 +1,4 @@
-import { useCallback, useState, useContext } from "react";
+import { useCallback, useState, useContext, useEffect } from "react";
 
 import api from "./services/api";
 import {
@@ -10,14 +10,18 @@ import { ThemeContext } from "./contexts/theme-context";
 
 function App() {
   const { isDark, toggleTheme } = useContext(ThemeContext);
-  const [city, setCity] = useState("");
-  const [country, setCountry] = useState("");
+  const [form, setForm] = useState({ city: "", country: "" });
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState(null);
-  const [suggestions, setSuggestions] = useState([]);
   const [weatherData, setWeatherData] = useState(null);
-  const [showSuggestions, setShowSuggestions] = useState(false);
+  //cityList
+  const [cityList, setCityList] = useState([]);
+  const [showCityList, setShowCityList] = useState(false);
+  //country list
+  const [countryList, setCountryList] = useState([]);
+  const [filteredCountries, setFilteredCountries] = useState([]);
+  const [showCountryList, setShowCountryList] = useState(false);
 
   const fetchWeather = useCallback(async (cityName, countryName = "") => {
     setLoading(true);
@@ -53,19 +57,19 @@ function App() {
       setWeatherData(null);
       const errMsg =
         err.response?.status === 404
-          ? "City not found."
+          ? "Result not found. Please try again"
           : "Server error. Try again later.";
       setErrorMsg(errMsg);
     } finally {
       setLoading(false);
-      setShowSuggestions(false);
+      setShowCityList(false);
     }
   }, []);
 
-  const fetchSuggestions = useCallback(
+  const fetchcityList = useCallback(
     debounce(async (param) => {
       if (!param.trim() || param.length < 2) {
-        setSuggestions([]);
+        setCityList([]);
         return;
       }
       try {
@@ -74,14 +78,14 @@ function App() {
           limit: 5, //max 5
         });
         res.data = convertWeatherApiResponse(res.data);
-        setSuggestions(
+        setCityList(
           res.data?.map((item) => ({
             city: item.name,
             country: item.country,
           }))
         );
       } catch (err) {
-        setSuggestions([]);
+        setCityList([]);
       }
       //change if lag
     }, 400),
@@ -90,56 +94,85 @@ function App() {
 
   const handleSubmit = (e) => {
     if (e) e.preventDefault();
-    if (city.trim()) {
-      fetchWeather(city, country);
-      setShowSuggestions(false);
+    if (form.city.trim()) {
+      fetchWeather(form.city, form.country);
+      setShowCityList(false);
+      setShowCountryList(false);
     }
   };
 
   const handleCityChange = (e) => {
     const value = e.target.value;
-    setCity(value);
+    setForm((prev) => ({ ...prev, city: value }));
     setErrorMsg(null);
 
     if (value.length >= 2) {
-      fetchSuggestions(value);
-      setShowSuggestions(true);
+      fetchcityList(value);
+      setShowCityList(true);
     } else {
-      setSuggestions([]);
-      setShowSuggestions(false);
+      setCityList([]);
+      setShowCityList(false);
     }
   };
 
-  const handleSuggestionClick = (suggestion) => {
-    setCity(suggestion.city);
-    setCountry(suggestion.country);
-    setShowSuggestions(false);
+  const handleSelectCity = (suggestion) => {
+    setForm({
+      city: suggestion.city,
+      country: suggestion.country,
+    });
+    setShowCityList(false);
+    setShowCountryList(false);
     fetchWeather(suggestion.city, suggestion.country);
   };
 
-  const handleInputFocus = () => {
-    if (suggestions.length > 0) {
-      setShowSuggestions(true);
+  const handleInputFocus = (type) => {
+    if (type === "city" && cityList.length > 0) {
+      setShowCityList(true);
+    } else if (type === "country" && filteredCountries.length > 0) {
+      setShowCountryList(true);
     }
   };
 
-  const handleInputBlur = () => {
-    setTimeout(() => setShowSuggestions(false), 200);
+  const handleInputBlur = (type) => {
+    if (type === "city") {
+      setTimeout(() => setShowCityList(false), 200);
+    } else {
+      setTimeout(() => setShowCountryList(false), 200);
+    }
+  };
+
+  const handleCountryChange = (country) => {
+    setForm((prev) => ({
+      ...prev,
+      country: country,
+    }));
+
+    const query = country.toLowerCase();
+    setFilteredCountries(
+      countryList.filter((c) => c.name.toLowerCase().includes(query))
+    );
+  };
+
+  const selectCountry = (country) => {
+    console.log("Selected country:", country);
+    setForm((prev) => ({
+      ...prev,
+      country: country.name,
+    }));
+    setFilteredCountries([]);
   };
 
   const clearForm = () => {
-    setCity("");
-    setCountry("");
+    setForm({ city: "", country: "" });
     setWeatherData(null);
     setErrorMsg(null);
-    setSuggestions([]);
-    setShowSuggestions(false);
+    setCityList([]);
+    setShowCityList(false);
+    setCountryList(false);
   };
 
-  // handlers for history list
   const handleHistoryClick = (item) => {
-    setCity(item.city);
-    setCountry(item.country);
+    setForm({ city: item.city, country: item.country });
     fetchWeather(item.city, item.country);
   };
 
@@ -151,46 +184,118 @@ function App() {
     setHistory([]);
   };
 
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const res = await api.get.country.all();
+        const countries = res.data.map((item) => ({
+          name: item.name.common,
+          code: item.cca2,
+        }));
+        setCountryList(countries);
+        setFilteredCountries(countries);
+      } catch (err) {
+        console.error("Error loading countries", err);
+      }
+    };
+
+    fetchCountries();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-100 text-gray-800 dark:from-gray-900 dark:via-blue-900 dark:to-gray-900 dark:text-white transition-all duration-300">
       <div className="container mx-auto px-4 py-6 max-w-4xl">
-        <header className="flex flex-col sm:flex-row justify-between items-center mb-8 gap-4">
+        <header className="flex flex-row justify-between items-center mb-8 gap-4">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-blue-600">
+            <h1 className="text-2xl xl:text-3xl sm:text-4xl font-bold text-blue-600">
               Today's Weather
             </h1>
           </div>
           <button
             onClick={toggleTheme}
-            className="cursor-pointer px-6 py-3 rounded-full font-medium bg-gray-800 text-white hover:bg-gray-700 dark:bg-yellow-500 dark:text-gray-900 dark:hover:bg-yellow-400"
-            aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
+            className="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm mt-auto rounded-full font-medium bg-gray-800 text-white hover:bg-gray-700 dark:bg-yellow-500 dark:text-gray-900 dark:hover:bg-yellow-400"
           >
             {isDark ? "Light Mode" : "Dark Mode"}
           </button>
         </header>
 
-        <main className="rounded-2xl shadow-lg p-6 sm:p-8 bg-white/80 border border-white/20 dark:bg-gray-800/80 dark:border-gray-700">
-          <div className="space-y-4 mb-8">
-            <div className="flex flex-col lg:flex-row gap-4">
+        <main className="rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 bg-white/80 border border-white/20 dark:bg-gray-800/80 dark:border-gray-700">
+          {/* todo: improve weather card */}
+          {weatherData && (
+            <div className="mb-6 sm:mb-8 p-4 sm:p-6 rounded-xl sm:rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 dark:from-blue-600/20 dark:to-purple-600/20 dark:border-blue-500/30">
+              <div className="text-center">
+                <div className="mb-4 sm:mb-6">
+                  <h2 className="text-xl sm:text-2xl md:text-3xl font-bold leading-tight">
+                    {weatherData.name}
+                    {weatherData.sys?.country && (
+                      <span className="block xs:inline text-base sm:text-lg font-normal mt-1 xs:mt-0 xs:ml-2 text-gray-600 dark:text-gray-300">
+                        {countryList.find(
+                          (c) => c.code === weatherData.sys.country
+                        )?.name || weatherData.sys.country}
+                      </span>
+                    )}
+                  </h2>
+                  {weatherData.weather?.[0]?.main && (
+                    <p className="text-base sm:text-lg capitalize text-gray-600 dark:text-gray-300 mt-1">
+                      {weatherData.weather?.[0]?.main}
+                    </p>
+                  )}
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-center">
+                  <div className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-white/60 dark:bg-gray-700/50">
+                    <div className="text-2xl sm:text-3xl font-bold text-blue-600">
+                      {Math.round(weatherData.main?.temp || 0)}°C
+                    </div>
+                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {Math.round(((weatherData.main?.temp || 0) * 9) / 5 + 32)}
+                      °F
+                    </div>
+                  </div>
+
+                  <div className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-white/60 dark:bg-gray-700/50">
+                    <div className="text-xl sm:text-2xl font-bold text-purple-600">
+                      {weatherData.main?.humidity || 0}%
+                    </div>
+                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Humidity
+                    </div>
+                  </div>
+
+                  <div className="p-3 sm:p-4 rounded-lg sm:rounded-xl bg-white/60 dark:bg-gray-700/50">
+                    <div className="text-sm sm:text-lg font-semibold text-green-600 leading-tight">
+                      {formatDateTime(new Date())}
+                    </div>
+                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      Last Updated
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          {/* form */}
+          <div className="space-y-4 mb-6 sm:mb-8">
+            <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
                 <input
                   type="text"
-                  value={city}
+                  value={form.city}
                   onChange={handleCityChange}
-                  onFocus={handleInputFocus}
-                  onBlur={handleInputBlur}
-                  placeholder="City name..."
-                  className="w-full p-4 rounded-xl border-2 bg-white border-gray-200 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/25 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500"
+                  onFocus={() => handleInputFocus("city")}
+                  onBlur={() => handleInputBlur("city")}
+                  placeholder="City"
+                  className="text-input"
                   required
                 />
 
-                {showSuggestions && suggestions.length > 0 && (
+                {showCityList && cityList.length > 0 && (
                   <div className="absolute z-20 w-full mt-2 rounded-xl shadow-lg bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 hover:rounded-xl">
-                    {suggestions.map((suggestion, index) => (
+                    {cityList.map((suggestion, index) => (
                       <button
                         key={index}
                         type="button"
-                        onClick={() => handleSuggestionClick(suggestion)}
+                        onClick={() => handleSelectCity(suggestion)}
                         className="cursor-pointer w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-900 dark:text-white hover:rounded-xl"
                       >
                         <span className="font-medium">{suggestion.city}</span>,{" "}
@@ -203,23 +308,44 @@ function App() {
                 )}
               </div>
 
-              <div className="lg:w-1/3">
+              <div className="relative lg:w-1/3">
                 <input
                   type="text"
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  placeholder="Country (optional)"
-                  className="w-full p-4 rounded-xl border-2 bg-white border-gray-200 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/25 dark:bg-gray-700 dark:border-gray-600 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500"
+                  value={form.country}
+                  onChange={(e) => {
+                    handleCountryChange(e.target.value);
+                  }}
+                  onFocus={() => handleInputFocus("country")}
+                  onBlur={() => handleInputBlur("country")}
+                  placeholder="Country"
+                  className="text-input"
                 />
+                {showCountryList &&
+                  form.country &&
+                  filteredCountries.length > 0 && (
+                    <ul className="absolute z-30 bg-white dark:bg-gray-700 w-full mt-2 rounded-xl shadow-lg max-h-56 overflow-y-auto border border-gray-200 dark:border-gray-600">
+                      {filteredCountries.map((c, index) => (
+                        <li
+                          key={index}
+                          className="p-3 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+                          onClick={() => {
+                            selectCountry(c);
+                          }}
+                        >
+                          {c.name}
+                        </li>
+                      ))}
+                    </ul>
+                  )}
               </div>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-3">
+            <div className="flex flex-row gap-3">
               <button
                 type="submit"
-                disabled={loading || !city.trim()}
+                disabled={loading || !form.city.trim()}
                 onClick={handleSubmit}
-                className="flex-1 py-4 px-6 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 py-2 px-3 md:py-4 md:px-6 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <span className="flex items-center justify-center gap-2">
@@ -227,14 +353,14 @@ function App() {
                     Loading...
                   </span>
                 ) : (
-                  "Search Weather"
+                  "Search"
                 )}
               </button>
 
               <button
                 type="button"
                 onClick={clearForm}
-                className="px-6 py-4 rounded-xl font-semibold bg-gray-500 cursor-pointer hover:bg-gray-600 text-white"
+                className="py-2 px-3 md:py-4 md:px-6 rounded-xl font-semibold bg-gray-500 cursor-pointer hover:bg-gray-600 text-white"
               >
                 Clear
               </button>
@@ -242,70 +368,19 @@ function App() {
           </div>
 
           {errorMsg && (
-            <div className="mb-6 p-4 rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400">
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm sm:text-base">
               <span>Error: {errorMsg}</span>
             </div>
           )}
 
-          {weatherData && (
-            <div className="mb-8 p-6 rounded-2xl bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 dark:from-blue-600/20 dark:to-purple-600/20 dark:border-blue-500/30">
-              <div className="text-center">
-                <div className="mb-4">
-                  <h2 className="text-2xl sm:text-3xl font-bold">
-                    {weatherData.name}
-                    {weatherData.sys?.country && (
-                      <span className="text-lg font-normal ml-2 text-gray-600 dark:text-gray-300">
-                        {weatherData.sys.country}
-                      </span>
-                    )}
-                  </h2>
-                  {weatherData.weather?.[0]?.main && (
-                    <p className="text-lg capitalize text-gray-600 dark:text-gray-300">
-                      {weatherData.weather?.[0]?.main}
-                    </p>
-                  )}
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
-                  <div className="p-4 rounded-xl bg-white/60 dark:bg-gray-700/50">
-                    <div className="text-3xl font-bold text-blue-600">
-                      {Math.round(weatherData.main?.temp || 0)}°C
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      {Math.round(((weatherData.main?.temp || 0) * 9) / 5 + 32)}
-                      °F
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-white/60 dark:bg-gray-700/50">
-                    <div className="text-2xl font-bold text-purple-600">
-                      {weatherData.main?.humidity || 0}%
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Humidity
-                    </div>
-                  </div>
-
-                  <div className="p-4 rounded-xl bg-white/60 dark:bg-gray-700/50">
-                    <div className="text-lg font-semibold text-green-600">
-                      {formatDateTime(new Date())}
-                    </div>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
-                      Last Updated
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
+          {/* history */}
           <section>
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="text-xl font-bold">Recent Searches</h3>
+            <div className="flex xs:flex-row justify-between items-start xs:items-center mb-3 sm:mb-4 gap-2">
+              <h3 className="text-lg sm:text-xl font-bold">Recent Searches</h3>
               {history.length > 0 && (
                 <button
                   onClick={clearHistory}
-                  className="cursor-pointer text-red-500 hover:text-red-400 font-medium"
+                  className="cursor-pointer text-red-500 hover:text-red-400 font-medium text-xs sm:text-base shrink-0 ml-auto my-auto"
                 >
                   Clear History
                 </button>
@@ -313,39 +388,38 @@ function App() {
             </div>
 
             {history.length === 0 ? (
-              <div className="text-center py-8 text-gray-500 dark:text-gray-400">
-                <p>No recent searches</p>
+              <div className="text-center py-6 sm:py-8 text-gray-500 dark:text-gray-400">
+                <p className="text-sm sm:text-base">No recent searches</p>
               </div>
             ) : (
-              <div className="space-y-3 max-h-64 overflow-y-auto">
+              <div className="space-y-2 sm:space-y-3 max-h-56 sm:max-h-64 overflow-y-auto">
                 {history.map((item, index) => (
                   <div
                     key={item.id}
-                    className="flex items-center justify-between p-4 rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-700/50 dark:hover:bg-gray-700"
+                    className="flex items-center justify-between p-3 sm:p-4 rounded-lg sm:rounded-xl bg-gray-50 hover:bg-gray-100 dark:bg-gray-700/50 dark:hover:bg-gray-700"
                   >
                     <button
                       onClick={() => handleHistoryClick(item)}
-                      className="flex flex-1 text-left"
+                      className="flex flex-1 text-left min-w-0"
                     >
-                      <div className="items-center gap-3">
-                        <div className="font-medium hover:text-blue-600">
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium hover:text-blue-600 truncate text-sm sm:text-base">
                           {item.city}, {item.country}
                         </div>
-                        <div className="text-sm text-gray-500 dark:text-gray-400">
-                          {item.weather}
-                        </div>
-                      </div>
-                      <div className="content-center ml-auto items-center gap-3">
-                        <div className="font-medium text-gray-500 dark:text-gray-400">
-                          {item.dateTime}
+                        <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
+                          {item.dateTime}, {item.weather}
                         </div>
                       </div>
                     </button>
-
+                    <button
+                      onClick={() => handleHistoryClick(item)}
+                      className="cursor-pointer ml-2 sm:ml-4 p-1.5 sm:p-2 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-md sm:rounded-lg shrink-0 text-xs sm:text-sm"
+                    >
+                      Search
+                    </button>
                     <button
                       onClick={() => deleteHistoryItem(item.id)}
-                      className="ml-4 p-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-lg"
-                      aria-label={`Delete ${item.city} from history`}
+                      className="cursor-pointer ml-2 sm:ml-4 p-1.5 sm:p-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-md sm:rounded-lg shrink-0 text-xs sm:text-sm"
                     >
                       Delete
                     </button>
@@ -355,7 +429,6 @@ function App() {
             )}
           </section>
         </main>
-
         <footer className="text-center mt-8 text-sm text-gray-600 dark:text-gray-400">
           <p>© 2025 Today's Weather. All rights reserved.</p>
           <p>
