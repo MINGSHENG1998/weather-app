@@ -45,3 +45,14 @@ export const formatDateTime = (date) => {
 
   return formattedFinalDate;
 };
+
+export const classNames = (conditions) => {
+  const classes = [];
+
+  Object.keys(conditions).forEach((key) => {
+    const condition = conditions[key];
+    if (condition) classes.push(key);
+  });
+
+  return classes.join(" ");
+};

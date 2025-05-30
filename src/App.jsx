@@ -1,12 +1,14 @@
 import { useCallback, useState, useContext, useEffect } from "react";
 
+import AppButton from "./components/app-button";
+import AppInput from "./components/app-input";
+import { ThemeContext } from "./contexts/theme-context";
 import api from "./services/api";
 import {
   debounce,
   formatDateTime,
   convertWeatherApiResponse,
 } from "./util/common";
-import { ThemeContext } from "./contexts/theme-context";
 
 function App() {
   const { isDark, toggleTheme } = useContext(ThemeContext);
@@ -278,17 +280,14 @@ function App() {
           <div className="space-y-4 mb-6 sm:mb-8">
             <div className="flex flex-col sm:flex-row gap-4">
               <div className="relative flex-1">
-                <input
+                <AppInput
                   type="text"
                   value={form.city}
                   onChange={handleCityChange}
                   onFocus={() => handleInputFocus("city")}
                   onBlur={() => handleInputBlur("city")}
                   placeholder="City"
-                  className="text-input"
-                  required
                 />
-
                 {showCityList && cityList.length > 0 && (
                   <div className="absolute z-20 w-full mt-2 rounded-xl shadow-lg bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 hover:rounded-xl">
                     {cityList.map((suggestion, index) => (
@@ -309,61 +308,56 @@ function App() {
               </div>
 
               <div className="relative lg:w-1/3">
-                <input
+                <AppInput
                   type="text"
                   value={form.country}
-                  onChange={(e) => {
-                    handleCountryChange(e.target.value);
-                  }}
+                  onChange={(e) => handleCountryChange(e.target.value)}
                   onFocus={() => handleInputFocus("country")}
                   onBlur={() => handleInputBlur("country")}
                   placeholder="Country"
-                  className="text-input"
                 />
                 {showCountryList &&
                   form.country &&
                   filteredCountries.length > 0 && (
-                    <ul className="absolute z-30 bg-white dark:bg-gray-700 w-full mt-2 rounded-xl shadow-lg max-h-56 overflow-y-auto border border-gray-200 dark:border-gray-600">
+                    <div className="absolute z-20 w-full mt-2 max-h-80 overflow-auto rounded-xl shadow-lg bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 hover:rounded-xl">
                       {filteredCountries.map((c, index) => (
-                        <li
+                        <button
                           key={index}
-                          className="p-3 hover:bg-gray-100 dark:hover:bg-gray-600 cursor-pointer"
+                          type="button"
                           onClick={() => {
                             selectCountry(c);
                           }}
+                          className="cursor-pointer w-full p-3 text-left hover:bg-gray-50 dark:hover:bg-gray-600 text-gray-900 dark:text-white hover:rounded-xl"
                         >
-                          {c.name}
-                        </li>
+                          <span className="font-medium">{c.name}</span>
+                        </button>
                       ))}
-                    </ul>
+                    </div>
                   )}
               </div>
             </div>
 
             <div className="flex flex-row gap-3">
-              <button
+              <AppButton
                 type="submit"
                 disabled={loading || !form.city.trim()}
                 onClick={handleSubmit}
-                className="flex-1 py-2 px-3 md:py-4 md:px-6 rounded-xl font-semibold bg-blue-600 hover:bg-blue-700 text-white cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                label={"Search"}
+                className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? (
+                {loading && (
                   <span className="flex items-center justify-center gap-2">
                     <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                     Loading...
                   </span>
-                ) : (
-                  "Search"
                 )}
-              </button>
-
-              <button
+              </AppButton>
+              <AppButton
                 type="button"
                 onClick={clearForm}
-                className="py-2 px-3 md:py-4 md:px-6 rounded-xl font-semibold bg-gray-500 cursor-pointer hover:bg-gray-600 text-white"
-              >
-                Clear
-              </button>
+                label={"Clear"}
+                className="bg-gray-500 hover:bg-gray-600"
+              />
             </div>
           </div>
 
@@ -411,18 +405,20 @@ function App() {
                         </div>
                       </div>
                     </button>
-                    <button
+                    <AppButton
+                      type="button"
+                      textBtn={true}
                       onClick={() => handleHistoryClick(item)}
-                      className="cursor-pointer ml-2 sm:ml-4 p-1.5 sm:p-2 text-blue-500 hover:text-blue-400 hover:bg-blue-500/10 rounded-md sm:rounded-lg shrink-0 text-xs sm:text-sm"
-                    >
-                      Search
-                    </button>
-                    <button
+                      label={"Search"}
+                      className="[&>p]:text-blue-500 [&>p]:hover:text-blue-400 hover:bg-blue-500/10"
+                    />
+                    <AppButton
+                      type="button"
+                      textBtn={true}
                       onClick={() => deleteHistoryItem(item.id)}
-                      className="cursor-pointer ml-2 sm:ml-4 p-1.5 sm:p-2 text-red-500 hover:text-red-400 hover:bg-red-500/10 rounded-md sm:rounded-lg shrink-0 text-xs sm:text-sm"
-                    >
-                      Delete
-                    </button>
+                      label={"Delete"}
+                      className="[&>p]:text-red-500 [&>p]:hover:text-red-400 hover:bg-red-500/10"
+                    />
                   </div>
                 ))}
               </div>

@@ -1,0 +1,41 @@
+.app-input {
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 0.75rem;
+  border-width: 2px;
+  background-color: white;
+  border-color: #e5e7eb;
+  color: #111827;
+  ::placeholder {
+    color: #6b7280;
+  }
+
+  &:focus {
+    border-color: #3b82f6;
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.25);
+  }
+}
+
+@media (min-width: 768px) {
+  .app-input {
+    padding: 1rem;
+  }
+}
+
+/* Dark mode */
+@media (prefers-color-scheme: dark) {
+  .app-input {
+    background-color: #374151;
+    border-color: #4b5563;
+    color: white;
+  }
+
+  .app-input::placeholder {
+    color: #9ca3af;
+  }
+
+  .app-input:focus {
+    border-color: #3b82f6;
+  }
+}
