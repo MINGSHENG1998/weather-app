@@ -1,0 +1,24 @@
+{
+  "common": {
+    "search": "搜索",
+    "clear": "清除",
+    "loading": "加载中...",
+    "error": "错误",
+    "humidity": "湿度",
+    "last_updated": "最后更新",
+    "light_mode": "浅色模式",
+    "dark_mode": "深色模式",
+    "clear_history": "清除历史记录",
+    "no_recent_searches": "无近期搜索",
+    "delete": "删除",
+    "unknown_weather": "未知天气"
+  },
+  "home": {
+    "title": "今日天气",
+    "city_placeholder": "城市",
+    "country_placeholder": "国家",
+    "recent_searches": "最近搜索",
+    "result_not_found": "未找到结果，请重试",
+    "server_error": "服务器错误，请稍后重试"
+  }
+}

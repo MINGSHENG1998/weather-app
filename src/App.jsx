@@ -1,4 +1,5 @@
 import { useCallback, useState, useContext, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 
 import AppButton from "./components/app-button";
 import AppInput from "./components/app-input";
@@ -11,6 +12,7 @@ import {
 } from "./util/common";
 
 function App() {
+  const { t, i18n } = useTranslation("home");
   const { isDark, toggleTheme } = useContext(ThemeContext);
   const [form, setForm] = useState({ city: "", country: "" });
   const [history, setHistory] = useState([]);
@@ -24,6 +26,10 @@ function App() {
   const [countryList, setCountryList] = useState([]);
   const [filteredCountries, setFilteredCountries] = useState([]);
   const [showCountryList, setShowCountryList] = useState(false);
+
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
+  };
 
   const fetchWeather = useCallback(async (cityName, countryName = "") => {
     setLoading(true);
@@ -42,7 +48,7 @@ function App() {
           city: cityName,
           country: countryName || res.data.sys?.country,
           dateTime: formatDateTime(new Date()),
-          weather: res.data.weather?.[0]?.main || "Unknown Weather",
+          weather: res.data.weather?.[0]?.main || t("common:unknown_weather"),
           id: "TW" + Date.now() + Math.random(),
         };
 
@@ -59,8 +65,8 @@ function App() {
       setWeatherData(null);
       const errMsg =
         err.response?.status === 404
-          ? "Result not found. Please try again"
-          : "Server error. Try again later.";
+          ? t("result_not_found")
+          : t("server_error");
       setErrorMsg(errMsg);
     } finally {
       setLoading(false);
@@ -210,15 +216,48 @@ function App() {
         <header className="flex flex-row justify-between items-center mb-8 gap-4">
           <div>
             <h1 className="text-2xl xl:text-3xl sm:text-4xl font-bold text-blue-600">
-              Today's Weather
+              {t("title")}
             </h1>
           </div>
-          <button
-            onClick={toggleTheme}
-            className="cursor-pointer px-2 py-1 sm:px-4 sm:py-2 text-xs sm:text-sm mt-auto rounded-full font-medium bg-gray-800 text-white hover:bg-gray-700 dark:bg-yellow-500 dark:text-gray-900 dark:hover:bg-yellow-400"
-          >
-            {isDark ? "Light Mode" : "Dark Mode"}
-          </button>
+          <div className="flex flex-col gap-2 shrink-0 sm:flex-row">
+            <button
+              onClick={toggleTheme}
+              className="cursor-pointer px-2 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm rounded-full font-medium bg-gray-800 text-white hover:bg-gray-700 transition-colors duration-200 dark:bg-yellow-500 dark:text-gray-900 dark:hover:bg-yellow-400 whitespace-nowrap"
+            >
+              {isDark ? t("common:light_mode") : t("common:dark_mode")}
+            </button>
+
+            <div className="relative">
+              <select
+                value={i18n.language}
+                onChange={(e) => changeLanguage(e.target.value)}
+                className="w-full cursor-pointer px-2 py-1 sm:px-3 sm:py-1.5 text-xs sm:text-sm rounded-full font-medium bg-gray-200 text-gray-800 hover:bg-gray-300 transition-colors duration-200 dark:bg-gray-700 dark:text-gray-200 dark:hover:bg-gray-600 appearance-none pr-6 sm:pr-8 min-w-0"
+              >
+                <option value="en" className="cursor-pointer">
+                  EN
+                </option>
+                <option value="cn" className="cursor-pointer">
+                  中文
+                </option>
+              </select>
+
+              <div className="absolute right-1.5 sm:right-2 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                <svg
+                  className="w-3 h-3 sm:w-4 sm:h-4 text-current"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M19 9l-7 7-7-7"
+                  />
+                </svg>
+              </div>
+            </div>
+          </div>
         </header>
 
         <main className="rounded-xl sm:rounded-2xl shadow-lg p-4 sm:p-6 md:p-8 bg-white/80 border border-white/20 dark:bg-gray-800/80 dark:border-gray-700">
@@ -260,7 +299,7 @@ function App() {
                       {weatherData.main?.humidity || 0}%
                     </div>
                     <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      Humidity
+                      {t("common:humidity")}
                     </div>
                   </div>
 
@@ -269,7 +308,7 @@ function App() {
                       {formatDateTime(new Date())}
                     </div>
                     <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                      Last Updated
+                      {t("common:last_updated")}
                     </div>
                   </div>
                 </div>
@@ -286,7 +325,7 @@ function App() {
                   onChange={handleCityChange}
                   onFocus={() => handleInputFocus("city")}
                   onBlur={() => handleInputBlur("city")}
-                  placeholder="City"
+                  placeholder={t("city_placeholder")}
                 />
                 {showCityList && cityList.length > 0 && (
                   <div className="absolute z-20 w-full mt-2 rounded-xl shadow-lg bg-white border-gray-200 dark:bg-gray-700 dark:border-gray-600 hover:rounded-xl">
@@ -314,7 +353,7 @@ function App() {
                   onChange={(e) => handleCountryChange(e.target.value)}
                   onFocus={() => handleInputFocus("country")}
                   onBlur={() => handleInputBlur("country")}
-                  placeholder="Country"
+                  placeholder={t("country_placeholder")}
                 />
                 {showCountryList &&
                   form.country &&
@@ -342,7 +381,7 @@ function App() {
                 type="submit"
                 disabled={loading || !form.city.trim()}
                 onClick={handleSubmit}
-                label={"Search"}
+                label={t("common:search")}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading && (
@@ -355,7 +394,7 @@ function App() {
               <AppButton
                 type="button"
                 onClick={clearForm}
-                label={"Clear"}
+                label={t("common:clear")}
                 className="bg-gray-500 hover:bg-gray-600"
               />
             </div>
@@ -363,27 +402,33 @@ function App() {
 
           {errorMsg && (
             <div className="mb-4 sm:mb-6 p-3 sm:p-4 rounded-lg sm:rounded-xl bg-red-500/10 border border-red-500/20 text-red-600 dark:text-red-400 text-sm sm:text-base">
-              <span>Error: {errorMsg}</span>
+              <span>
+                {t("common:error")}: {errorMsg}
+              </span>
             </div>
           )}
 
           {/* history */}
           <section>
             <div className="flex xs:flex-row justify-between items-start xs:items-center mb-3 sm:mb-4 gap-2">
-              <h3 className="text-lg sm:text-xl font-bold">Recent Searches</h3>
+              <h3 className="text-lg sm:text-xl font-bold">
+                {t("recent_searches")}
+              </h3>
               {history.length > 0 && (
                 <button
                   onClick={clearHistory}
                   className="cursor-pointer text-red-500 hover:text-red-400 font-medium text-xs sm:text-base shrink-0 ml-auto my-auto"
                 >
-                  Clear History
+                  {t("common:clear_history")}
                 </button>
               )}
             </div>
 
             {history.length === 0 ? (
               <div className="text-center py-6 sm:py-8 text-gray-500 dark:text-gray-400">
-                <p className="text-sm sm:text-base">No recent searches</p>
+                <p className="text-sm sm:text-base">
+                  {t("common:no_recent_searches")}
+                </p>
               </div>
             ) : (
               <div className="space-y-2 sm:space-y-3 max-h-56 sm:max-h-64 overflow-y-auto">
@@ -409,14 +454,14 @@ function App() {
                       type="button"
                       textBtn={true}
                       onClick={() => handleHistoryClick(item)}
-                      label={"Search"}
+                      label={t("common:search")}
                       className="[&>p]:text-blue-500 [&>p]:hover:text-blue-400 hover:bg-blue-500/10"
                     />
                     <AppButton
                       type="button"
                       textBtn={true}
                       onClick={() => deleteHistoryItem(item.id)}
-                      label={"Delete"}
+                      label={t("common:delete")}
                       className="[&>p]:text-red-500 [&>p]:hover:text-red-400 hover:bg-red-500/10"
                     />
                   </div>
@@ -426,7 +471,7 @@ function App() {
           </section>
         </main>
         <footer className="text-center mt-8 text-sm text-gray-600 dark:text-gray-400">
-          <p>© 2025 Today's Weather. All rights reserved.</p>
+          <p>© 2025 {t("home:title")}. All rights reserved.</p>
           <p>
             Built by{" "}
             <a

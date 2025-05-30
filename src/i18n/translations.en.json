@@ -1,0 +1,21 @@
+{
+  "common": {
+    "search": "Search",
+    "clear": "Clear",
+    "loading": "Loading...",
+    "error": "Error",
+    "humidity": "Humidity",
+    "last_updated": "Last Updated",
+    "light_mode": "Light Mode",
+    "dark_mode": "Dark Mode",
+    "clear_history": "Clear History",
+    "no_recent_searches": "No recent searches",
+    "delete": "Delete"
+  },
+  "home": {
+    "title": "Today's Weather",
+    "city_placeholder": "City",
+    "country_placeholder": "Country",
+    "recent_searches": "Recent Searches"
+  }
+}
